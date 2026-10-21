@@ -1,0 +1,28 @@
+{
+  "name": "soda-server",
+  "version": "1.0.0",
+  "description": "汽水音乐独立服务端",
+  "type": "module",
+  "main": "qs/index.ts",
+  "packageManager": "pnpm@12.4.1",
+  "scripts": {
+    "typecheck": "tsc",
+    "start": "node src/server.ts",
+    "dev": "node --watch src/server.ts",
+    "test": "pnpm run typecheck && node test/smoke-test.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/swagger": "^9.8.1",
+    "@fastify/swagger-ui": "^6.1.1",
+    "fastify": "^5.12.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}
