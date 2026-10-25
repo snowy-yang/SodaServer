@@ -1,6 +1,6 @@
 # 汽水音乐服务端（SodaServer）
 
-汽水音乐（字节跳动）独立 API 服务器，纯 Python 实现（FastAPI + asyncio），无需浏览器环境。技术栈与 [MusicServer](https://gitea.4i.hk/hhhge/MusicServer) 同构（自其 qs 平台拆分而来），API 路径保持兼容（保留 `/qs` 段）。
+汽水音乐（字节跳动）独立 API 服务器，纯 Python 实现（FastAPI + asyncio），无需浏览器环境。技术栈与 [MusicServer](https://github.com/snowy-yang/MusicServer) 同构（自其 qs 平台拆分而来），API 路径保持兼容（保留 `/qs` 段）。
 
 ## 功能
 
@@ -53,7 +53,7 @@ uv run pyright                        # 类型检查
 
 汽水 PC 通道（搜索、登录态 `track_v2` 取流）依赖 `X-Helios`/`X-Medusa` 两个加密签名头，按优先级三种供给；都没有时搜索直接报错、取流降级匿名试听：
 
-1. **签名服务器（显式）**：环境变量 `QS_SIGN_SERVER`（如 `http://127.0.0.1:16889`，可选 `QS_SIGN_TOKEN` 配 Bearer 鉴权）。契约兼容独立仓库 **qs-signer**（`gitea.4i.hk/hhhge/qs-signer`，本地与 SodaServer 同级）的 `mssdk-sign` 服务（请求 `{url, headers, body?}`，响应 `{ok, headers, added?}`）。
+1. **签名服务器（显式）**：环境变量 `QS_SIGN_SERVER`（如 `http://127.0.0.1:16889`，可选 `QS_SIGN_TOKEN` 配 Bearer 鉴权）。契约兼容独立仓库 **qs-signer**（[github.com/snowy-yang/qs-signer](https://github.com/snowy-yang/qs-signer)）的 `mssdk-sign` 服务（请求 `{url, headers, body?}`，响应 `{ok, headers, added?}`）。
 2. **签名服务器（自动探测）**：`QS_SIGN_SERVER` 未配置时，启动探测本机 16689 端口——`/healthz` 应答 `ok:true && service:"mssdk-sign"` 才自动接入。
 3. **固定值兜底**：两个加密头直接用抓包固定值，写入 `data/qs-sign.json`（已 gitignore）：
 
