@@ -1,7 +1,9 @@
-# Dependencies
-node_modules/
-package-lock.json
-yarn.lock
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
 
 # Runtime
 *.log
@@ -29,9 +31,3 @@ Thumbs.db
 # Test / build
 dist/
 coverage/
-.nyc_output/
-
-# TypeScript：源码全部 .ts、由 Node 直接运行（类型剥离），不生成 .js 产物。
-# 以下规则仅作保险，防止误生成的发射产物被提交。
-src/**/*.js
-qs/**/*.js

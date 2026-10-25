@@ -1,0 +1,64 @@
+[project]
+name = "soda-server"
+version = "1.0.0"
+description = "汽水音乐独立服务端"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115",
+  # 默认服务器：granian；uvicorn 作为备选（--server uvicorn）
+  # extras 按平台自动选择循环：rloop/uvloop（Unix）、winloop（Windows）、reload（watchfiles）
+  "granian[reload,rloop,uvloop,winloop]>=2.0",
+  "uvicorn[standard]>=0.30",
+  "aiohttp>=3.10",
+  "brotli>=1.1",
+  "cryptography>=43",
+  "qrcode>=8",
+  "pillow>=10",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.24",
+  "ruff>=0.6",
+  "pyright>=1.1.380",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["app", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "BLE", "ASYNC", "RUF"]
+ignore = [
+  "RUF001", # 中文全角标点在文案里是刻意用法
+  "RUF002",
+  "RUF003",
+  "E501",    # 行宽由 formatter 决定，长 URL/中文注释不强拆
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pyright]
+include = ["app", "tests", "scripts"]
+exclude = [".venv", "tmp"]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportUnknownParameterType = false
+reportMissingParameterType = false
+reportUntypedFunctionDecorator = false
+reportUnnecessaryIsInstance = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]

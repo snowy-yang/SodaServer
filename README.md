@@ -1,6 +1,6 @@
 # 汽水音乐服务端（SodaServer）
 
-汽水音乐（字节跳动）独立 API 服务器，纯 Node.js 实现，无需浏览器环境。架构与 [MusicServer](https://gitea.4i.hk/hhhge/MusicServer) 同构（自其 qs 平台拆分而来），API 路径保持兼容（保留 `/qs` 段）。
+汽水音乐（字节跳动）独立 API 服务器，纯 Python 实现（FastAPI + asyncio），无需浏览器环境。技术栈与 [MusicServer](https://gitea.4i.hk/hhhge/MusicServer) 同构（自其 qs 平台拆分而来），API 路径保持兼容（保留 `/qs` 段）。
 
 ## 功能
 
@@ -12,15 +12,20 @@
 
 ## 快速开始
 
+需要 Python 3.12 与 [uv](https://docs.astral.sh/uv/)。
+
 ```bash
-pnpm install
-pnpm start       # 默认端口 16690，可用 PORT 环境变量修改（需 Node 22.18+，直接运行 .ts）
-pnpm dev         # 开发模式：node --watch 热重载
-pnpm test        # 类型检查（tsc）+ 冒烟测试（自动启动/关闭本地服务器）
-pnpm typecheck   # 仅类型检查，不运行
+uv sync          # 安装依赖（创建 .venv）
+start.bat        # 默认端口 16690，可用 PORT 环境变量修改
+start.bat dev    # 开发模式：热重载（granian --reload）
+uv run pytest    # 测试（离线，不发真实外网请求）
+uv run ruff check app scripts tests   # Lint
+uv run pyright                        # 类型检查
 ```
 
 环境变量可写入项目根目录的 `.env` 文件（已 gitignore），启动时自动加载；已存在的真实环境变量优先于 `.env` 文件值。
+
+服务器默认 granian + 平台首选事件循环（Windows: winloop / Unix: rloop），`--server uvicorn` 可切换。
 
 ## HTTP 接口
 
@@ -68,40 +73,45 @@ pnpm typecheck   # 仅类型检查，不运行
 ## 项目结构
 
 ```
-src/                HTTP 应用层（Fastify 服务器，全部 TypeScript 源码）
-  server.ts         HTTP 服务器入口（pnpm start 实际启动文件）
-  routes.ts         业务路由（JSON Schema 校验 + OpenAPI 元数据）
-  routes-login.ts   登录路由（扫码 / 短信 / sessionid）
+app/                  HTTP 应用层与平台核心（全部 Python 源码）
+  main.py             FastAPI 应用装配（中间件/异常处理/OpenAPI/路由）
+  config.py           环境变量与路径（.env 加载、DATA_DIR、端口）
+  routes/
+    music.py          业务路由（搜索 / 取流 / 歌词 / 封面 / 元数据 / 解密流代理）
+    login.py          登录路由（扫码 / 短信 / sessionid）
+    system.py         健康检查 / 平台信息
+  qs/                 汽水平台核心（自足，不依赖路由层）
+    mssdk.py          PC 通道签名（签名服务 → 固定值 三级供给）
+    passport.py       登录链路（扫码 / 短信 / sessionid 绑定 / 设备身份）
+    music_search.py   搜索（PC 通道 + 签名）
+    music_info.py     曲目元数据 / 封面（seo_track 匿名通道）
+    lyric.py          逐字歌词 → LRC/YRC
+    stream.py         取流编排（匿名试听 / 登录态签名 track_v2 → 解密 → 缓存）
+    audiodecrypt.py   CENC 音频解密（AES-CTR 逐样本 + spade_a PlayAuth → key）
+    lib/
+      http.py         网络请求（aiohttp，自动 JSON 解析与 gzip/deflate/br 解压）
+      store.py        凭据存储（data/auth.json 的 qs 与 _qs_passport_device 键，与 MusicServer 同格式可互迁）
+      utils.py        纯工具函数（sizeFormate/formatPlayTime）
+      qrcode.py       登录二维码渲染（data URL）
   http/
-    api-error.ts    业务错误类型（404/502 等 → 统一 JSON 响应）
-    auth-gate.ts    调用秘钥鉴权（AUTH_KEY，全路径防扫描；/stream/* 可改用短时签名）
-    rate-limit.ts   per-IP 滑动窗口限流（RATE_LIMIT，默认 120/分钟）
-    stream-sign.ts  /stream/* 流地址短时签名（HMAC 派生，10 分钟有效）
+    api_error.py      业务错误类型（404/502 等 → 统一 JSON 响应）
+    auth_gate.py      调用秘钥鉴权（AUTH_KEY，全路径防扫描；/stream/* 可改用短时签名）
+    rate_limit.py     per-IP 滑动窗口限流（RATE_LIMIT，默认 120/分钟）
+    stream_sign.py    /stream/* 流地址短时签名（HMAC 派生，10 分钟有效）
+    envelope.py       统一成功信封 { code: 0, data }
   openapi/
-    components.ts   OpenAPI 共享 schema（与路由校验同源）
-    ui.ts           ReDoc 页面模板
-qs/                 汽水平台核心（自足，不依赖 src）
-  index.ts          平台模块入口（musicSearch/getMusicUrl/getStreamBuffer/getLyric/getPic）
-  musicSearch.ts    搜索（PC 通道 + 签名）
-  musicInfo.ts      曲目元数据 / 封面（seo_track 匿名通道）
-  lyric.ts          逐字歌词 → LRC/YRC
-  passport.ts       登录链路（扫码 / 短信 / sessionid 绑定 / 设备身份）
-  mssdk.ts          PC 通道签名（签名服务 → 固定值 三级供给）
-  stream.ts         取流编排（匿名试听 / 登录态签名 track_v2 → 解密 → 缓存）
-  audiodecrypt.ts   CENC 音频解密（AES-CTR 逐样本 + spade_a PlayAuth → key）
-  lib/
-    http.ts         HTTP 请求（可取消、自动 JSON 解析、gzip/deflate 解压）
-    store.ts        凭据存储（data/auth.json 的 qs 与 _qs_passport_device 键，与 MusicServer 同格式可互迁）
-    utils.ts        纯工具函数（sizeFormate/formatPlayTime）
-test/
-  smoke-test.ts     冒烟测试（自动启动/关闭本地服务器）
+    components.py     OpenAPI 共享 schema（与文档同源）
+    ui.py             ReDoc 页面模板
+scripts/
+  serve.py            启动器（granian/uvicorn + 事件循环选择）
+tests/                pytest 套件（离线；HTTP 集成测试用进程内 uvicorn + aiohttp）
 ```
 
-> 分层依赖严格单向：`src` → `qs`，`qs` 内部自包含（不反向依赖 src）。源码统一为 TypeScript（import 一律写 `.ts` 后缀），由 Node ≥22.18 的原生类型剥离直接运行——**无编译产物**，改完即跑；tsc 仅用于类型检查（`pnpm typecheck`）。代码只使用可剥离的 TS 语法（无 enum/namespace/参数属性），新增代码也须遵守。
+> 分层依赖严格单向：`routes` → `qs`，`qs` 内部自包含（不反向依赖路由层）。SDK 原版的 `{ promise, cancelHttp }` 可取消请求句柄在 Python 版收敛为原生 `async def`，取消语义由 asyncio task 取消表达。代码由 granian/uvicorn 直接运行——**无编译产物**，改完即跑；ruff/pyright 用于静态检查。
 
 ## 与 MusicServer 的关系
 
-- 本项目自 MusicServer 的 `sdk/qs/` + `sdk/apis/qs.ts` 拆分而来，API 路径保留 `/qs` 段，点歌端换 `base_url` 即可接入。
+- 本项目自 MusicServer 的 `sdk/qs/` + `sdk/apis/qs.ts` 拆分而来，技术栈与其 Python 版一致（FastAPI + granian + aiohttp，uv 管理），API 路径保留 `/qs` 段，点歌端换 `base_url` 即可接入。
 - 凭据文件格式与 MusicServer 一致（`data/auth.json` 顶层键 `qs` 与 `_qs_passport_device`），整份 auth.json 可直接复制迁移登录态。
 - PC 签名依赖共享同一个 qs-signer 部署（8899 `server.mjs` / 16689 `mssdk-sign`）。
 
